@@ -26,16 +26,16 @@ public class ExecutorTestDefault {
         		//new es.ucm.fdi.ici.c2021.practica1.grupo01.MsPacMan();
         		//new es.ucm.fdi.ici.c2021.practica2.grupo09.MsPacMan();
         		//new es.ucm.fdi.ici.c2021.practica2.grupo03.MsPacMan();
-        		//new TheVoids2024.Gabo.Pacmans.BritoPacman();
-                new TheVoids2024.Gabo.Pacmans.Pacman1();
+        		new TheVoids2024.Gabo.Pacmans.BritoPacman();
+                //new TheVoids2024.Gabo.Pacmans.Pacman1();
                 //new TheVoids2024.Gabo.Pacmans.Pacman6();
 
         GhostController ghosts = //new es.ucm.fdi.ici.c2021.practica2.grupo09.Ghosts();
         		//new pacman.controllers.examples.GhostsRandom();
         		//new es.ucm.fdi.ici.c2021.practica2.grupo03.Ghosts();
-        		new es.ucm.fdi.ici.c2021.practica2.grupo09.Ghosts();
+        		//new es.ucm.fdi.ici.c2021.practica2.grupo09.Ghosts();
         		//new es.ucm.fdi.ici.c2021.practica1.grupo09.Ghosts();
-                //new TheVoids2024.Gabo.Ghosts.Ghosts1();
+                new TheVoids2024.Gabo.Ghosts.Ghosts5();
                 //new TheVoids2024.Gabo.Ghosts.Ghosts6();
                 //new TheVoids2024.Gabo.Ghosts.HugoGhosts();
 
