@@ -1,69 +1,94 @@
 package TheVoids2024.Gabo.Ghosts;
 
 import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
 import pacman.controllers.GhostController;
-import pacman.game.Constants.DM;
 import pacman.game.Constants.GHOST;
 import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 
-public class Ghosts3 extends GhostController {
+public final class Ghosts3 extends GhostController {
+    
     private EnumMap<GHOST, MOVE> moves = new EnumMap<>(GHOST.class);
-    private GHOST[] ghostnames = GHOST.values();
-    private MOVE[] allMoves = MOVE.values();
+    
+    public EnumMap<GHOST, MOVE> getMove(Game game, long timeDue) {
+        for (GHOST ghost : GHOST.values()) {
+            if (game.doesGhostRequireAction(ghost)) {
+                MOVE[] possibleMoves = game.getPossibleMoves(game.getGhostCurrentNodeIndex(ghost), game.getGhostLastMoveMade(ghost));
+                moves.put(ghost, decideMove(game, ghost, possibleMoves));
+            }
+        }
+        return moves;
+    }
 
-    private boolean pacManClosePowerPills(Game game) {
-        int pacManNode = game.getPacmanCurrentNodeIndex();
+    private MOVE decideMove(Game game, GHOST ghost, MOVE[] possibleMoves) {
+        if (ghost == GHOST.BLINKY) {
+            return getPursueMove(game, ghost, possibleMoves);
+        } else if (game.getGhostEdibleTime(ghost) > 0 || closeToPower(game)) {
+            return getRunAwayMove(game, ghost, possibleMoves);
+        } else {
+            return getPursueMove(game, ghost, possibleMoves);
+        }
+    }
+
+    private boolean closeToPower(Game game) {
         int[] powerPills = game.getActivePowerPillsIndices();
-        for (int powerPill : powerPills) {
-            Double distance = game.getDistance(pacManNode, powerPill, game.getPacmanLastMoveMade(), DM.PATH);
-            if (distance <= 50) {
+        for (int i : powerPills) {
+            int n = game.getShortestPathDistance(game.getPacmanCurrentNodeIndex(), i, game.getPacmanLastMoveMade());
+            if (n <= 60) {
+                // System.out.println("si esta cerca: " + n);
                 return true;
             }
         }
         return false;
     }
-
-    private void followTargetOrRandom(Game game, GHOST ghost, int targetNode, int minDistance, int maxDistance) {
-        int ghostNode = game.getGhostCurrentNodeIndex(ghost);
-        MOVE move;
-
-        Double distanceToTarget = game.getDistance(ghostNode, targetNode, game.getPacmanLastMoveMade(), DM.PATH);
-        if (distanceToTarget >= minDistance && distanceToTarget <= maxDistance) {
-            move = game.getNextMoveTowardsTarget(ghostNode, targetNode, DM.PATH);
-        } else {
-            move = allMoves[game.getGhostLastMoveMade(ghost).ordinal()];
+    
+    private MOVE getRunAwayMove(Game game, GHOST ghost, MOVE[] possibilitiesMoves) {
+        Map<MOVE, Integer> allMovesValues = new HashMap<MOVE, Integer>(possibilitiesMoves.length);
+        int ghLocation = game.getGhostCurrentNodeIndex(ghost);
+        int pcLocation = game.getPacmanCurrentNodeIndex();
+        for (MOVE move : possibilitiesMoves) {
+            int neighbour = game.getNeighbour(ghLocation, move);
+            int distanceValue = game.getShortestPathDistance(pcLocation, neighbour, game.getPacmanLastMoveMade());
+            allMovesValues.put(move, distanceValue);
         }
-
-        moves.put(ghost, move);
+        
+        // Best move
+        int bestDistance = Integer.MIN_VALUE;
+        MOVE bestMove = null;
+        for (MOVE move : possibilitiesMoves) {
+            if (allMovesValues.get(move) != null)
+                if (allMovesValues.get(move) > bestDistance) {
+                    bestDistance = allMovesValues.get(move);
+                    bestMove = move;
+                }
+        }
+        // System.out.println(ghost.name() + " : " + bestMove + " RunAway");
+        return bestMove;
     }
 
-    @Override
-    public EnumMap<GHOST, MOVE> getMove(Game game, long timeDue) {
-        moves.clear();
-
-        int pacManNode = game.getPacmanCurrentNodeIndex();
-
-        for (GHOST ghost : ghostnames) {
-            if (game.doesGhostRequireAction(ghost)) {
-                if (ghost.equals(GHOST.BLINKY)) {
-                    followTargetOrRandom(game, ghost, pacManNode, 0, Integer.MAX_VALUE);
-                } else if (ghost.equals(GHOST.SUE)) {
-                    followTargetOrRandom(game, ghost, pacManNode, 0, 85);
-                } else if (ghost.equals(GHOST.PINKY) || ghost.equals(GHOST.INKY)) {
-                    int targetNode = pacManNode + 5;
-                    if (!pacManClosePowerPills(game)) {
-                        followTargetOrRandom(game, ghost, targetNode, Integer.MIN_VALUE, Integer.MAX_VALUE);
-                    } else {
-                        // Handle logic when Pac-Man is close to power pills
-                        // Add your specific logic here if needed
-                        // For now, just continue random movement
-                        moves.put(ghost, allMoves[game.getGhostLastMoveMade(ghost).ordinal()]);
-                    }
+    private MOVE getPursueMove(Game game, GHOST ghost, MOVE[] possibleMoves) {
+        Map<MOVE, Integer> allMovesValues = new HashMap<MOVE, Integer>(possibleMoves.length);
+        int ghLocation = game.getGhostCurrentNodeIndex(ghost);
+        int pcLocation = game.getPacmanCurrentNodeIndex();
+        for (MOVE move : possibleMoves) {
+            int neighbour = game.getNeighbour(ghLocation, move);
+            int distanceValue = game.getShortestPathDistance(pcLocation, neighbour, game.getPacmanLastMoveMade());
+            allMovesValues.put(move, distanceValue);
+        }           
+        
+        // Best move
+        int bestDistance = Integer.MAX_VALUE;
+        MOVE bestMove = null;
+        
+        for (MOVE move : possibleMoves) {
+            if (allMovesValues.get(move) != null)
+                if (allMovesValues.get(move) < bestDistance) {
+                    bestDistance = allMovesValues.get(move);
+                    bestMove = move;
                 }
-            }
         }
-
-        return this.moves;
+        return bestMove;
     }
 }
