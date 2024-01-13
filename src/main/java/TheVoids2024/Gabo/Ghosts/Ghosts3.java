@@ -9,13 +9,15 @@ import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 
 public final class Ghosts3 extends GhostController {
-    
+
     private EnumMap<GHOST, MOVE> moves = new EnumMap<>(GHOST.class);
-    
+
     public EnumMap<GHOST, MOVE> getMove(Game game, long timeDue) {
         for (GHOST ghost : GHOST.values()) {
+            int ghostNode = game.getGhostCurrentNodeIndex(ghost);
+            MOVE ghostMove = game.getGhostLastMoveMade(ghost);
             if (game.doesGhostRequireAction(ghost)) {
-                MOVE[] possibleMoves = game.getPossibleMoves(game.getGhostCurrentNodeIndex(ghost), game.getGhostLastMoveMade(ghost));
+                MOVE[] possibleMoves = game.getPossibleMoves(ghostNode, ghostMove);
                 moves.put(ghost, decideMove(game, ghost, possibleMoves));
             }
         }
@@ -34,58 +36,57 @@ public final class Ghosts3 extends GhostController {
 
     private boolean closeToPower(Game game) {
         int[] powerPills = game.getActivePowerPillsIndices();
-        for (int i : powerPills) {
-            int n = game.getShortestPathDistance(game.getPacmanCurrentNodeIndex(), i, game.getPacmanLastMoveMade());
-            if (n <= 60) {
-                // System.out.println("si esta cerca: " + n);
+        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        MOVE pacmanMove = game.getPacmanLastMoveMade();
+        for (int pp : powerPills) {
+            if (game.getShortestPathDistance(pacmanNode, pp, pacmanMove) <= 60) {
                 return true;
             }
         }
         return false;
     }
-    
-    private MOVE getRunAwayMove(Game game, GHOST ghost, MOVE[] possibilitiesMoves) {
-        Map<MOVE, Integer> allMovesValues = new HashMap<MOVE, Integer>(possibilitiesMoves.length);
-        int ghLocation = game.getGhostCurrentNodeIndex(ghost);
-        int pcLocation = game.getPacmanCurrentNodeIndex();
-        for (MOVE move : possibilitiesMoves) {
-            int neighbour = game.getNeighbour(ghLocation, move);
-            int distanceValue = game.getShortestPathDistance(pcLocation, neighbour, game.getPacmanLastMoveMade());
-            allMovesValues.put(move, distanceValue);
+
+    private MOVE getRunAwayMove(Game game, GHOST ghost, MOVE[] posibleMoves) {
+        Map<MOVE, Integer> allMoves = new HashMap<MOVE, Integer>(posibleMoves.length);
+        int ghostNode = game.getGhostCurrentNodeIndex(ghost);
+        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        MOVE pacmanMove = game.getPacmanLastMoveMade();
+        for (MOVE move : posibleMoves) {
+            int neighbour = game.getNeighbour(ghostNode, move);
+            int distanceValue = game.getShortestPathDistance(pacmanNode, neighbour, pacmanMove);
+            allMoves.put(move, distanceValue);
         }
-        
-        // Best move
+
         int bestDistance = Integer.MIN_VALUE;
         MOVE bestMove = null;
-        for (MOVE move : possibilitiesMoves) {
-            if (allMovesValues.get(move) != null)
-                if (allMovesValues.get(move) > bestDistance) {
-                    bestDistance = allMovesValues.get(move);
+        for (MOVE move : posibleMoves) {
+            if (allMoves.get(move) != null)
+                if (allMoves.get(move) > bestDistance) {
+                    bestDistance = allMoves.get(move);
                     bestMove = move;
                 }
         }
-        // System.out.println(ghost.name() + " : " + bestMove + " RunAway");
         return bestMove;
     }
 
     private MOVE getPursueMove(Game game, GHOST ghost, MOVE[] possibleMoves) {
-        Map<MOVE, Integer> allMovesValues = new HashMap<MOVE, Integer>(possibleMoves.length);
-        int ghLocation = game.getGhostCurrentNodeIndex(ghost);
-        int pcLocation = game.getPacmanCurrentNodeIndex();
+        Map<MOVE, Integer> allMoves = new HashMap<MOVE, Integer>(possibleMoves.length);
+        int ghostNode = game.getGhostCurrentNodeIndex(ghost);
+        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        MOVE pacmanMove = game.getPacmanLastMoveMade();
         for (MOVE move : possibleMoves) {
-            int neighbour = game.getNeighbour(ghLocation, move);
-            int distanceValue = game.getShortestPathDistance(pcLocation, neighbour, game.getPacmanLastMoveMade());
-            allMovesValues.put(move, distanceValue);
-        }           
-        
-        // Best move
+            int neighbour = game.getNeighbour(ghostNode, move);
+            int distanceValue = game.getShortestPathDistance(pacmanNode, neighbour, pacmanMove);
+            allMoves.put(move, distanceValue);
+        }
+
         int bestDistance = Integer.MAX_VALUE;
         MOVE bestMove = null;
-        
+
         for (MOVE move : possibleMoves) {
-            if (allMovesValues.get(move) != null)
-                if (allMovesValues.get(move) < bestDistance) {
-                    bestDistance = allMovesValues.get(move);
+            if (allMoves.get(move) != null)
+                if (allMoves.get(move) < bestDistance) {
+                    bestDistance = allMoves.get(move);
                     bestMove = move;
                 }
         }
