@@ -1,139 +1,205 @@
 package TheVoids2024.Gabo.Pacmans;
 
 import pacman.controllers.PacmanController;
-import pacman.game.Constants;
 import pacman.game.Constants.DM;
-import pacman.game.Game;
-import pacman.game.Constants.MOVE;
 import pacman.game.Constants.GHOST;
+import pacman.game.Constants.MOVE;
+import pacman.game.Game;
+import java.util.ArrayList;
+import java.util.List; // Asegúrate de importar las clases necesarias
 
 public final class Pacman4 extends PacmanController {
-    private GHOST closestGhost;
-    private GHOST secondGhost;
-    private GHOST thirdGhost;
-    private GHOST farthestGhost;
+    private int pacmanPowerTime = 0; // Variable para rastrear el poder de Pac-Man
 
-    private boolean BLINKYedible;
-    private boolean INKYedible;
-    private boolean PINKYedible;
-    private boolean SUEedible;
-
-    private double closestGhostdistance;
-    private double secondGhostdistance;
-    private double thirdGhostdistance;
-    private double farthestGhostdistance;
-    private int closestGhostNode;
-    private int secondGhostNode;
-    private int thirdGhostNode;
-    private int farthestGhostNode;
-
-    private int closestPowerPill;
-    private int secondPowerPill;
-    private int thirdPowerPill;
-    private int farthestPowerPill;
-    private double closestPowerPillDistance;
-    private double secondPowerPillDistance;
-    private double thirdPowerPillDistance;
-    private double farthestPowerPillDistance;
-
-    @Override
+    @Override // ----------------------------------------------
     public MOVE getMove(Game game, long timeDue) {
-        // Obtener información sobre fantasmas y píldoras de poder
-        getGhostInfo(game);
-        getPowerPillsInfo(game);
+        List<GHOST> edibleGhosts = getEdibleGhosts(game);
 
-        // Agrega tu lógica para determinar el movimiento aquí
-        // Por ejemplo, podrías basar el movimiento en la información recopilada sobre fantasmas y píldoras de poder.
+        if (edibleGhosts.size() > 0) {
+            pacmanPowerTime = game.getGhostEdibleTime(edibleGhosts.get(0));
 
-        return lastMove; // Mantén esto por ahora si aún no has implementado la lógica específica.
-    }
+            /* 
+            if (getClosestEdibleGhost(game) != null) {
+                System.out.println("Edible Ghosts Time: "+pacmanPowerTime);
+                for (GHOST ghost : edibleGhosts) {
+                    System.out.print(ghost);
+                    if (ghost == getClosestEdibleGhost(game)) {
+                        System.out.print(" *****");
+                    }
+                    System.out.println();
+                }
+            }
+            */
 
-    private void getGhostInfo(Game game) {
-        BLINKYedible = game.isGhostEdible(GHOST.BLINKY);
-        INKYedible = game.isGhostEdible(GHOST.INKY);
-        PINKYedible = game.isGhostEdible(GHOST.PINKY);
-        SUEedible = game.isGhostEdible(GHOST.SUE);
+        } else {
+            pacmanPowerTime = 0;
+        }
 
-        double dstClosest = Double.MAX_VALUE;
-        double dstSecond = Double.MAX_VALUE;
-        double dstThird = Double.MAX_VALUE;
-        double dstFarthest = Double.MAX_VALUE;
+        MOVE move;
+        if (pacmanPowerTime > 0) {
+            move = getMoveToPursueGhosts(game);
+        } else if (game.getActivePowerPillsIndices().length > 0) {
+            move = getMoveToGoToPowerPill(game);
+        } else {
+            move = getMoveToEatNormalPills(game);
+        }
 
-        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        return move;
+    }// ---------------------------------------------
 
-        for (GHOST g : GHOST.values()) {
-            double dst = game.getDistance(pacmanNode, game.getGhostCurrentNodeIndex(g), DM.PATH);
-            if (dstClosest > dst) {
-                dstFarthest = dstThird;
-                farthestGhostdistance = thirdGhostdistance;
-                dstThird = dstSecond;
-                thirdGhostdistance = secondGhostdistance;
-                dstSecond = dstClosest;
-                secondGhostdistance = closestGhostdistance;
-                dstClosest = dst;
-                closestGhostdistance = dst;
-                closestGhost = g;
-            } else if (dst < dstSecond) {
-                dstFarthest = dstThird;
-                farthestGhostdistance = thirdGhostdistance;
-                dstThird = dstSecond;
-                thirdGhostdistance = secondGhostdistance;
-                dstSecond = dst;
-                secondGhostdistance = dst;
-                secondGhost = g;
-            } else if (dst < dstThird) {
-                dstFarthest = dstThird;
-                farthestGhostdistance = thirdGhostdistance;
-                dstThird = dst;
-                thirdGhostdistance = dst;
-                thirdGhost = g;
-            } else {
-                dstFarthest = dst;
-                farthestGhostdistance = dst;
-                farthestGhost = g;
+    // Obtener los fantasmas Comestibles
+    private List<GHOST> getEdibleGhosts(Game game) {
+        List<GHOST> edibleGhosts = new ArrayList<>();
+
+        for (GHOST ghost : GHOST.values()) {
+            if (game.isGhostEdible(ghost)) {
+                edibleGhosts.add(ghost);
             }
         }
 
-        closestGhostNode = game.getGhostCurrentNodeIndex(closestGhost);
-        secondGhostNode = game.getGhostCurrentNodeIndex(secondGhost);
-        thirdGhostNode = game.getGhostCurrentNodeIndex(thirdGhost);
-        farthestGhostNode = game.getGhostCurrentNodeIndex(farthestGhost);
+        return edibleGhosts;
     }
 
-    private void getPowerPillsInfo(Game game) {
-        int[] powerPills = game.getActivePowerPillsIndices();
-        if (powerPills.length > 0) {
-            int pacmanNode = game.getPacmanCurrentNodeIndex();
-            closestPowerPill = game.getClosestNodeIndexFromNodeIndex(pacmanNode, powerPills, DM.PATH);
-            farthestPowerPill = game.getFarthestNodeIndexFromNodeIndex(pacmanNode, powerPills, DM.PATH);
+    // Obtener al fantasma comestible más cercano
+    private GHOST getClosestEdibleGhost(Game game) {
+        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        GHOST closestGhost = null;
+        int minDistance = Integer.MAX_VALUE;
 
-            int third = -1;
-            int second = -1;
-            if (powerPills.length > 2) {
-                for (int i = 0; i < powerPills.length; ++i) {
-                    if (powerPills[i] != closestPowerPill && powerPills[i] != farthestPowerPill) {
-                        if (second == -1) {
-                            second = powerPills[i];
-                        } else {
-                            third = powerPills[i];
-                        }
+        for (GHOST ghost : getEdibleGhosts(game)) {
+            int ghostNode = game.getGhostCurrentNodeIndex(ghost);
+            int distance = game.getShortestPathDistance(pacmanNode, ghostNode);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestGhost = ghost;
+            }
+        }
+        return closestGhost;
+    }
+
+//Obtiene el fantasma NO comestible más cercano
+    private GHOST getClosestInedibleGhost(Game game) {
+        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        GHOST closestGhost = null;
+        int minDistance = Integer.MAX_VALUE;
+
+        for (GHOST ghost : GHOST.values()) {
+            if (!game.isGhostEdible(ghost)) {
+                int ghostNode = game.getGhostCurrentNodeIndex(ghost);
+                int distance = game.getShortestPathDistance(pacmanNode, ghostNode);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestGhost = ghost;
+                }
+            }
+        }
+        return closestGhost;
+    }
+// Obtiene el fantasma más cercano (no importa si es comible o no)
+    private GHOST getClosestGhostToPacman(Game game, GHOST ghost) {
+        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        GHOST closestGhost = null;
+        int minDistance = Integer.MAX_VALUE;
+        int ghostNode = game.getGhostCurrentNodeIndex(ghost);
+        int distance = game.getShortestPathDistance(pacmanNode, ghostNode);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestGhost = ghost;
+        }
+        return closestGhost;
+    }
+
+    private int getClosestPowerPillNode(Game game, int[] powerPillsNode) {
+        int pacmanNode = game.getPacmanCurrentNodeIndex();       
+            return game.getClosestNodeIndexFromNodeIndex(pacmanNode, powerPillsNode, DM.PATH);
+    }
+
+    private boolean areAllGhostsOutOfJail(Game game) {
+        for (GHOST ghost : GHOST.values()) {
+            int lairTime = game.getGhostLairTime(ghost);
+            if (lairTime > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private MOVE getOptimizedMove(Game game, int targetNodeIndex, boolean avoidGhosts) {
+        int pacmanNode = game.getPacmanCurrentNodeIndex();
+        MOVE[] possibleMoves = game.getPossibleMoves(pacmanNode, game.getPacmanLastMoveMade());
+    
+        MOVE bestMove = null;
+        double bestScore = avoidGhosts ? -Double.MAX_VALUE : Double.MAX_VALUE;
+        final int someSafeDistance = 45;
+        final double ghostPenalty = 1000;
+    
+        GHOST closestInedibleGhost = this.getClosestInedibleGhost(game); // Asumiendo que este método ya existe
+    
+        for (MOVE move : possibleMoves) {
+            int nextNode = game.getNeighbour(pacmanNode, move);
+            if (nextNode != -1) {
+                double distanceToTarget = game.getDistance(nextNode, targetNodeIndex, DM.PATH);
+                double score = avoidGhosts ? -distanceToTarget : distanceToTarget;
+    
+                if (avoidGhosts && closestInedibleGhost != null) {
+                    int ghostNode = game.getGhostCurrentNodeIndex(closestInedibleGhost);
+                    double distanceToGhost = game.getDistance(nextNode, ghostNode, DM.PATH);
+    
+                    if (distanceToGhost < someSafeDistance) {
+                        score -= ghostPenalty;
                     }
                 }
-
-                if (game.getDistance(pacmanNode, second, DM.PATH) > game.getDistance(pacmanNode, third, DM.PATH)) {
-                    int temp = second;
-                    second = third;
-                    third = temp;
+    
+                if ((avoidGhosts && score > bestScore) || (!avoidGhosts && score < bestScore)) {
+                    bestScore = score;
+                    bestMove = move;
                 }
-
-                secondPowerPill = second;
-                thirdPowerPill = third;
-                secondPowerPillDistance = game.getDistance(pacmanNode, secondPowerPill, DM.PATH);
-                thirdPowerPillDistance = game.getDistance(pacmanNode, thirdPowerPill, DM.PATH);
             }
-
-            closestPowerPillDistance = game.getDistance(pacmanNode, closestPowerPill, DM.PATH);
-            farthestPowerPillDistance = game.getDistance(pacmanNode, farthestPowerPill, DM.PATH);
         }
+    
+        return bestMove != null ? bestMove : game.getNextMoveAwayFromTarget(pacmanNode, game.getGhostCurrentNodeIndex(closestInedibleGhost), DM.PATH);
     }
+    
+    
+    
+
+    // Obtener el movimiento para perseguir fantasmas
+    private MOVE getMoveToPursueGhosts(Game game) {
+        GHOST closestEdibleGhost = this.getClosestEdibleGhost(game);
+    
+        if (closestEdibleGhost != null) {
+            int nearestEdibleGhostNode = game.getGhostCurrentNodeIndex(closestEdibleGhost);
+            // Persigue al fantasma comestible más cercano, pero evita los fantasmas no comestibles
+            return this.getOptimizedMove(game, nearestEdibleGhostNode, true);
+        }
+        return this.getMoveToEatNormalPills(game);
+    }
+    
+    private MOVE getMoveToGoToPowerPill(Game game) {
+        int[] powerPillNodes = game.getActivePowerPillsIndices();
+        if (this.areAllGhostsOutOfJail(game) && powerPillNodes.length > 0) {
+            int closestPowerPillNode = this.getClosestPowerPillNode(game, powerPillNodes);
+            // Moverse hacia la píldora de poder más cercana, evitando fantasmas
+            return this.getOptimizedMove(game, closestPowerPillNode, true);
+        }
+        return this.getMoveToEatNormalPills(game);
+    }
+    
+    
+
+    private MOVE getMoveToEatNormalPills(Game game) {
+        int[] pills = game.getActivePillsIndices();
+        
+        if (pills.length > 0) {
+            int randomIndex = (int) (Math.random() * pills.length);
+            int targetNode = pills[randomIndex];
+            // Moverse hacia una píldora normal seleccionada al azar, evitando fantasmas
+            return this.getOptimizedMove(game, targetNode, true);
+        }
+        return lastMove; // Si no hay píldoras normales activas, retorna el último movimiento
+    }
+    
+    // Otros
 }
