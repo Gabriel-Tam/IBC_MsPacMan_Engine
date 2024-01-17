@@ -28,7 +28,7 @@ public class ExecutorTestDefault {
         		//new es.ucm.fdi.ici.c2021.practica2.grupo03.MsPacMan();
         		//new TheVoids2024.Gabo.Pacmans.BritoPacman();
                 //new TheVoids2024.Gabo.Pacmans.Pacman6();
-                new TheVoids2024.Gabo.Pacmans.Pacman2();
+                new TheVoids2024.Gabo.Pacmans.Pacman8();
 
         GhostController ghosts = new es.ucm.fdi.ici.c2021.practica2.grupo09.Ghosts();
         		//new pacman.controllers.examples.GhostsRandom();

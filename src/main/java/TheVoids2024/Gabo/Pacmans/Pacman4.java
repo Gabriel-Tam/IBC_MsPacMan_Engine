@@ -18,6 +18,7 @@ public final class Pacman4 extends PacmanController {
         if (edibleGhosts.size() > 0) {
             pacmanPowerTime = game.getGhostEdibleTime(edibleGhosts.get(0));
 
+            /* 
             if (getClosestEdibleGhost(game) != null) {
                 System.out.println("Edible Ghosts Time: " + pacmanPowerTime);
                 for (GHOST ghost : edibleGhosts) {
@@ -28,7 +29,7 @@ public final class Pacman4 extends PacmanController {
                     System.out.println();
                 }
             }
-
+*/
         } else {
             pacmanPowerTime = 0;
         }

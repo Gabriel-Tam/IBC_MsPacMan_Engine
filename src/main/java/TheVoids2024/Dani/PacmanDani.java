@@ -69,27 +69,32 @@ public final class PacmanDani extends PacmanController {
     private MOVE makeMove(Game game) {
         int currentPacmanIndex = game.getPacmanCurrentNodeIndex();
         MOVE move = MOVE.NEUTRAL;
-        switch (currentState) {
-            case EXPLORING:
-            case EATING_PILLS:
-                move = getBestPillPath(game, currentPacmanIndex);
-                break;
-            case CHASING_GHOST:
-                move = moveToClosestEdibleGhost(game);
-                break;
-            case EVADING_GHOST:
-                move = moveAwayFromClosestNonEdibleGhost(game);
-                break;
-            case SEEKING_POWER_PILL:
-                move = moveToClosestPowerPill(game, currentPacmanIndex);
-                break;
-            default:
-                move = evaluateRiskAndReward(game, currentPacmanIndex);
-                break;
+
+        // Si hay fantasmas peligrosos cerca, prioriza la evasión
+        if (closeToAnyGhost(game)) {
+            move = moveAwayFromClosestNonEdibleGhost(game);
+        } else {
+            // En otros casos, sigue la lógica del estado actual
+            switch (currentState) {
+                case SEEKING_POWER_PILL:
+                    move = moveToClosestPowerPill(game, currentPacmanIndex);
+                    break;
+                case EATING_PILLS:
+                    move = getBestPillPath(game, currentPacmanIndex);
+                    break;
+                case CHASING_GHOST:
+                    move = moveToClosestEdibleGhost(game);
+                    break;
+                case EXPLORING:
+                default:
+                    // Evaluación de riesgo y recompensa en todo momento
+                    move = evaluateRiskAndReward(game, currentPacmanIndex);
+                    break;
+            }
         }
-        
-        return move;
-        }
+
+        return move != MOVE.NEUTRAL ? move : game.getPacmanLastMoveMade();
+    }
 
     private MOVE moveAwayFromClosestNonEdibleGhost(Game game) {
         int minDistance = Integer.MAX_VALUE;
@@ -209,41 +214,45 @@ public final class PacmanDani extends PacmanController {
     }
 
     private MOVE moveToClosestEdibleGhost(Game game) {
-        if (game.getNumberOfActivePowerPills() > 0) {
-            // Si Pacman tiene una super pastilla activa, persigue a los fantasmas
-            // comestibles
-            int minDistance = Integer.MAX_VALUE;
-            GHOST minGhost = null;
-            int currentPacmanIndex = game.getPacmanCurrentNodeIndex();
+        // Estrategia mejorada para cazar fantasmas comestibles
+        if (game.getNumberOfActivePowerPills() > 0 && anyEdibleGhost(game)) {
+            return chaseEdibleGhosts(game, game.getPacmanCurrentNodeIndex());
+        }
+        return MOVE.NEUTRAL;
+    }
 
-            for (GHOST ghost : GHOST.values()) {
-                if (game.getGhostEdibleTime(ghost) > 0) {
-                    int distance = game.getShortestPathDistance(currentPacmanIndex,
-                            game.getGhostCurrentNodeIndex(ghost));
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        minGhost = ghost;
-                    }
+    private MOVE chaseEdibleGhosts(Game game, int currentPacmanIndex) {
+        int minDistance = Integer.MAX_VALUE;
+        GHOST minGhost = null;
+
+        for (GHOST ghost : GHOST.values()) {
+            if (game.getGhostEdibleTime(ghost) > 0) {
+                int distance = game.getShortestPathDistance(currentPacmanIndex, game.getGhostCurrentNodeIndex(ghost));
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    minGhost = ghost;
                 }
             }
-
-            if (minGhost != null) {
-                return game.getNextMoveTowardsTarget(currentPacmanIndex, game.getGhostCurrentNodeIndex(minGhost),
-                        Constants.DM.PATH);
-            }
         }
-        return MOVE.NEUTRAL; // Si no hay fantasmas comestibles, no hace ningún movimiento
+
+        if (minGhost != null) {
+            return game.getNextMoveTowardsTarget(currentPacmanIndex, game.getGhostCurrentNodeIndex(minGhost),
+                    Constants.DM.PATH);
+        }
+        return MOVE.NEUTRAL;
     }
 
     // Mejora en la búsqueda de power pills y fantasmas
     private MOVE moveToClosestPowerPill(Game game, int currentPacmanIndex) {
+        // Si hay power pills disponibles, encuentra la más cercana
         if (game.getNumberOfActivePowerPills() > 0) {
-        int[] powerPills = game.getActivePowerPillsIndices();
-        int closestPowerPillIndex = game.getClosestNodeIndexFromNodeIndex(currentPacmanIndex, powerPills, Constants.DM.PATH);
-        if (closestPowerPillIndex != -1) {
-        return game.getNextMoveTowardsTarget(currentPacmanIndex, closestPowerPillIndex, Constants.DM.PATH);
+            int[] powerPills = game.getActivePowerPillsIndices();
+            int closestPowerPillIndex = game.getClosestNodeIndexFromNodeIndex(currentPacmanIndex, powerPills,
+                    Constants.DM.PATH);
+            if (closestPowerPillIndex != -1) {
+                return game.getNextMoveTowardsTarget(currentPacmanIndex, closestPowerPillIndex, Constants.DM.PATH);
+            }
         }
-        }
-        return MOVE.NEUTRAL;
-        }
+        return MOVE.NEUTRAL; // Si no hay power pills, no se mueve hacia ellas
+    }
 }
